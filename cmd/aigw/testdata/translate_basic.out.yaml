@@ -15,7 +15,6 @@ metadata:
       kind: AIGatewayRoute
       name: envoy-ai-gateway-basic
       uid: ""
-  resourceVersion: "1"
 spec:
   parentRefs:
     - name: envoy-ai-gateway-basic
@@ -85,7 +84,6 @@ metadata:
       kind: AIGatewayRoute
       name: envoy-ai-gateway-basic
       uid: ""
-  resourceVersion: "1"
 spec:
   extProc:
     - backendRefs:
@@ -247,3 +245,13 @@ spec:
   selector:
     app: ai-eg-route-extproc-envoy-ai-gateway-basic
     app.kubernetes.io/managed-by: envoy-ai-gateway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: ai-eg-host-rewrite
+  namespace: default
+spec:
+  urlRewrite:
+    hostname:
+      type: Backend
