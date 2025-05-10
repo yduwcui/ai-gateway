@@ -23,7 +23,7 @@ import (
 // on the output schema of the AIServiceBackend while doing the other necessary jobs like
 // upstream authentication, rate limit, etc.
 //
-// For Advanced Users: Envoy AI Gateway will generate the following k8s resources corresponding to the AIGatewayRoute:
+// Envoy AI Gateway will generate the following k8s resources corresponding to the AIGatewayRoute:
 //
 //   - Deployment, Service, and ConfigMap of the k8s API for the AI Gateway filter.
 //     The name of these resources are `ai-eg-route-extproc-${name}`.
@@ -37,7 +37,8 @@ import (
 // All of these resources are created in the same namespace as the AIGatewayRoute. Note that this is the implementation
 // detail subject to change. If you want to customize the default behavior of the Envoy AI Gateway, you can use these
 // resources as a reference and create your own resources. Alternatively, you can use EnvoyPatchPolicy API of the Envoy
-// Gateway to patch the generated resources. For example, you can insert a custom filter into the filter chain.
+// Gateway to patch the generated resources. For example, you can configure the retry fallback behavior by attaching
+// BackendTrafficPolicy API of Envoy Gateway to the generated HTTPRoute.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -205,6 +206,11 @@ type AIGatewayRouteRule struct {
 	//
 	// The namespace of each backend is "local", i.e. the same namespace as the AIGatewayRoute.
 	//
+	// By configuring multiple backends, you can achieve the fallback behavior in the case of
+	// the primary backend is not available combined with the BackendTrafficPolicy of Envoy Gateway.
+	// Please refer to https://gateway.envoyproxy.io/docs/tasks/traffic/failover/ as well as
+	// https://gateway.envoyproxy.io/docs/tasks/traffic/retry/.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=128
 	BackendRefs []AIGatewayRouteRuleBackendRef `json:"backendRefs,omitempty"`
@@ -356,7 +362,8 @@ type AIServiceBackendSpec struct {
 	APISchema VersionedAPISchema `json:"schema"`
 	// BackendRef is the reference to the Backend resource that this AIServiceBackend corresponds to.
 	//
-	// A backend can be of either k8s Service or Backend resource of Envoy Gateway.
+	// A backend must be a Backend resource of Envoy Gateway. Note that k8s Service will be supported
+	// as a backend in the future.
 	//
 	// This is required to be set.
 	//
