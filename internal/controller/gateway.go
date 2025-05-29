@@ -153,7 +153,9 @@ func (c *GatewayController) ensureExtensionPolicy(ctx context.Context, gw *gwapi
 				ProcessingMode: &egv1a1.ExtProcProcessingMode{
 					AllowModeOverride: true, // Streaming completely overrides the buffered mode.
 					Request:           &egv1a1.ProcessingModeOptions{Body: ptr.To(egv1a1.BufferedExtProcBodyProcessingMode)},
+					Response:          &egv1a1.ProcessingModeOptions{Body: ptr.To(egv1a1.BufferedExtProcBodyProcessingMode)},
 				},
+				Metadata: &egv1a1.ExtProcMetadata{WritableNamespaces: []string{aigv1a1.AIGatewayFilterMetadataNamespace}},
 				BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
 					BackendObjectReference: gwapiv1.BackendObjectReference{
 						Name:      gwapiv1.ObjectName(sideCarExtProcBackendName),
