@@ -14,20 +14,22 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
+	"github.com/tidwall/sjson"
 
 	"github.com/envoyproxy/ai-gateway/internal/apischema/openai"
 )
 
 // NewChatCompletionOpenAIToOpenAITranslator implements [Factory] for OpenAI to OpenAI translation.
-func NewChatCompletionOpenAIToOpenAITranslator() OpenAIChatCompletionTranslator {
-	return &openAIToOpenAITranslatorV1ChatCompletion{}
+func NewChatCompletionOpenAIToOpenAITranslator(modelNameOverride string) OpenAIChatCompletionTranslator {
+	return &openAIToOpenAITranslatorV1ChatCompletion{modelNameOverride: modelNameOverride}
 }
 
 // openAIToOpenAITranslatorV1ChatCompletion implements [Translator] for /v1/chat/completions.
 type openAIToOpenAITranslatorV1ChatCompletion struct {
-	stream        bool
-	buffered      []byte
-	bufferingDone bool
+	modelNameOverride string
+	stream            bool
+	buffered          []byte
+	bufferingDone     bool
 }
 
 // RequestBody implements [OpenAIChatCompletionTranslator.RequestBody].
@@ -36,6 +38,18 @@ func (o *openAIToOpenAITranslatorV1ChatCompletion) RequestBody(raw []byte, req *
 ) {
 	if req.Stream {
 		o.stream = true
+	}
+	var newBody []byte
+	if o.modelNameOverride != "" {
+		// If modelName is set we override the model to be used for the request.
+		out, err := sjson.SetBytesOptions(raw, "model", o.modelNameOverride, &sjson.Options{
+			Optimistic:     true,
+			ReplaceInPlace: true,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to set model name: %w", err)
+		}
+		newBody = out
 	}
 	// On retry, the path might have changed to a different provider. So, this will ensure that the path is always set to OpenAI.
 	if onRetry {
@@ -51,10 +65,15 @@ func (o *openAIToOpenAITranslatorV1ChatCompletion) RequestBody(raw []byte, req *
 				}},
 			},
 		}
+		newBody = raw
+	}
+
+	if len(newBody) > 0 {
 		bodyMutation = &extprocv3.BodyMutation{
-			Mutation: &extprocv3.BodyMutation_Body{Body: raw},
+			Mutation: &extprocv3.BodyMutation_Body{Body: newBody},
 		}
 	}
+
 	return
 }
 
