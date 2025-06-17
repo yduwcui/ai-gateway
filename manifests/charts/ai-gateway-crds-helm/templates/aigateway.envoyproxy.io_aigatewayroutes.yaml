@@ -505,6 +505,8 @@ spec:
                     - OpenAI
                     - AWSBedrock
                     - AzureOpenAI
+                    - GCPVertexAI
+                    - GCPAnthropic
                     type: string
                   version:
                     description: |-
