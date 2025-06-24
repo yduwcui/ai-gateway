@@ -322,6 +322,18 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 		// Token latency is only recorded for streaming responses, otherwise it doesn't make sense since
 		// these metrics are defined as a difference between the two output events.
 		c.metrics.RecordTokenLatency(ctx, tokenUsage.OutputTokens)
+		timeToFirstToken := c.metrics.GetTimeToFirstToken()
+		interTokenLatency := c.metrics.GetInterTokenLatency()
+		fmt.Printf("TTFT=%v, ITL=%v\n", timeToFirstToken, interTokenLatency)
+		if timeToFirstToken > 0 {
+			if headerMutation == nil {
+				headerMutation = &extprocv3.HeaderMutation{}
+			}
+			setHeader(headerMutation, "x-tokenlatency-ttft", fmt.Sprintf("%.2f", timeToFirstToken))
+		}
+		if interTokenLatency > 0 {
+			setHeader(headerMutation, "x-tokenlatency-itl", fmt.Sprintf("%.2f", interTokenLatency))
+		}
 	}
 
 	if body.EndOfStream && len(c.config.requestCosts) > 0 {
