@@ -18,12 +18,14 @@ import (
 
 // chatCompletion is the implementation for the chat completion AI Gateway metrics.
 type chatCompletion struct {
-	metrics        *genAI
-	firstTokenSent bool
-	requestStart   time.Time
-	lastTokenTime  time.Time
-	model          string
-	backend        string
+	metrics           *genAI
+	firstTokenSent    bool
+	requestStart      time.Time
+	lastTokenTime     time.Time
+	model             string
+	backend           string
+	timeToFirstToken  float64
+	interTokenLatency float64
 }
 
 // NewChatCompletion creates a new ChatCompletion instance.
@@ -126,11 +128,20 @@ func (c *chatCompletion) RecordTokenLatency(ctx context.Context, tokens uint32, 
 
 	if !c.firstTokenSent {
 		c.firstTokenSent = true
-		c.metrics.firstTokenLatency.Record(ctx, time.Since(c.requestStart).Seconds(), metric.WithAttributes(attrs...))
+		c.timeToFirstToken = time.Since(c.requestStart).Seconds()
+		c.metrics.firstTokenLatency.Record(ctx, c.timeToFirstToken, metric.WithAttributes(attrs...))
 	} else if tokens > 0 {
 		// Calculate time between tokens.
-		itl := time.Since(c.lastTokenTime).Seconds() / float64(tokens)
-		c.metrics.outputTokenLatency.Record(ctx, itl, metric.WithAttributes(attrs...))
+		c.interTokenLatency = time.Since(c.lastTokenTime).Seconds() / float64(tokens)
+		c.metrics.outputTokenLatency.Record(ctx, c.interTokenLatency, metric.WithAttributes(attrs...))
 	}
 	c.lastTokenTime = time.Now()
+}
+
+func (c *chatCompletion) GetTimeToFirstToken() float64 {
+	return c.timeToFirstToken
+}
+
+func (c *chatCompletion) GetInterTokenLatency() float64 {
+	return c.interTokenLatency
 }

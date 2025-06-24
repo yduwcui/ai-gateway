@@ -67,4 +67,6 @@ type ChatCompletionMetrics interface {
 	RecordRequestCompletion(ctx context.Context, success bool, extraAttrs ...attribute.KeyValue)
 	// RecordTokenLatency records latency metrics for token generation.
 	RecordTokenLatency(ctx context.Context, tokens uint32, extraAttrs ...attribute.KeyValue)
+	GetTimeToFirstToken() float64
+	GetInterTokenLatency() float64
 }
