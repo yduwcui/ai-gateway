@@ -300,17 +300,6 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 		headerMutation.RemoveHeaders = append(headerMutation.RemoveHeaders, "content-encoding")
 	}
 
-	resp := &extprocv3.ProcessingResponse{
-		Response: &extprocv3.ProcessingResponse_ResponseBody{
-			ResponseBody: &extprocv3.BodyResponse{
-				Response: &extprocv3.CommonResponse{
-					HeaderMutation: headerMutation,
-					BodyMutation:   bodyMutation,
-				},
-			},
-		},
-	}
-
 	// TODO: we need to investigate if we need to accumulate the token usage for streaming responses.
 	c.costs.InputTokens += tokenUsage.InputTokens
 	c.costs.OutputTokens += tokenUsage.OutputTokens
@@ -329,11 +318,25 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 			if headerMutation == nil {
 				headerMutation = &extprocv3.HeaderMutation{}
 			}
-			setHeader(headerMutation, "x-tokenlatency-ttft", fmt.Sprintf("%.2f", timeToFirstToken))
+			setHeader(headerMutation, "x-tokenlatency-ttft", fmt.Sprintf("%.3f", timeToFirstToken))
 		}
 		if interTokenLatency > 0 {
-			setHeader(headerMutation, "x-tokenlatency-itl", fmt.Sprintf("%.2f", interTokenLatency))
+			if headerMutation == nil {
+				headerMutation = &extprocv3.HeaderMutation{}
+			}
+			setHeader(headerMutation, "x-tokenlatency-itl", fmt.Sprintf("%.3f", interTokenLatency))
 		}
+	}
+
+	resp := &extprocv3.ProcessingResponse{
+		Response: &extprocv3.ProcessingResponse_ResponseBody{
+			ResponseBody: &extprocv3.BodyResponse{
+				Response: &extprocv3.CommonResponse{
+					HeaderMutation: headerMutation,
+					BodyMutation:   bodyMutation,
+				},
+			},
+		},
 	}
 
 	if body.EndOfStream && len(c.config.requestCosts) > 0 {
