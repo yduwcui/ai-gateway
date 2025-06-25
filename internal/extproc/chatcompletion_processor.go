@@ -305,6 +305,11 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 	c.costs.OutputTokens += tokenUsage.OutputTokens
 	c.costs.TotalTokens += tokenUsage.TotalTokens
 
+	if headerMutation == nil {
+		headerMutation = &extprocv3.HeaderMutation{}
+	}
+	setHeader(headerMutation, "x-foo", "bar")
+
 	// Update metrics with token usage.
 	c.metrics.RecordTokenUsage(ctx, tokenUsage.InputTokens, tokenUsage.OutputTokens, tokenUsage.TotalTokens)
 	if c.stream {
