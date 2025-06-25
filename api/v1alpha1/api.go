@@ -419,9 +419,9 @@ type VersionedAPISchema struct {
 
 	// Version is the version of the API schema.
 	//
-	// When the name is set to "OpenAI", this equals to the prefix of the OpenAI API endpoints, and
-	// this defaults to "v1" if not set. For example, "chat completions" API endpoint will be
-	// "/v1/chat/completions" if the version is set to "v1".
+	// When the name is set to "OpenAI", this equals to the prefix of the OpenAI API endpoints. This defaults to "v1"
+	// if not set or empty string. For example, "chat completions" API endpoint will be "/v1/chat/completions"
+	// if the version is set to "v1".
 	//
 	// This is especially useful when routing to the backend that has an OpenAI compatible API but has a different
 	// versioning scheme. For example, Gemini OpenAI compatible API (https://ai.google.dev/gemini-api/docs/openai) uses
@@ -498,6 +498,10 @@ type BackendSecurityPolicy struct {
 //
 // Only one type of BackendSecurityPolicy can be defined.
 // +kubebuilder:validation:MaxProperties=2
+// +kubebuilder:validation:XValidation:rule="self.type == 'APIKey' ? (has(self.apiKey) && !has(self.awsCredentials) && !has(self.azureCredentials) && !has(self.gcpCredentials)) : true",message="When type is APIKey, only apiKey field should be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'AWSCredentials' ? (has(self.awsCredentials) && !has(self.apiKey) && !has(self.azureCredentials) && !has(self.gcpCredentials)) : true",message="When type is AWSCredentials, only awsCredentials field should be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'AzureCredentials' ? (has(self.azureCredentials) && !has(self.apiKey) && !has(self.awsCredentials) && !has(self.gcpCredentials)) : true",message="When type is AzureCredentials, only azureCredentials field should be set"
+// +kubebuilder:validation:XValidation:rule="self.type == 'GCPCredentials' ? (has(self.gcpCredentials) && !has(self.apiKey) && !has(self.awsCredentials) && !has(self.azureCredentials)) : true",message="When type is GCPCredentials, only gcpCredentials field should be set"
 type BackendSecurityPolicySpec struct {
 	// Type specifies the type of the backend security policy.
 	//
