@@ -300,39 +300,6 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 		headerMutation.RemoveHeaders = append(headerMutation.RemoveHeaders, "content-encoding")
 	}
 
-	// TODO: we need to investigate if we need to accumulate the token usage for streaming responses.
-	c.costs.InputTokens += tokenUsage.InputTokens
-	c.costs.OutputTokens += tokenUsage.OutputTokens
-	c.costs.TotalTokens += tokenUsage.TotalTokens
-
-	if headerMutation == nil {
-		headerMutation = &extprocv3.HeaderMutation{}
-	}
-	setHeader(headerMutation, "x-foo", "bar")
-
-	// Update metrics with token usage.
-	c.metrics.RecordTokenUsage(ctx, tokenUsage.InputTokens, tokenUsage.OutputTokens, tokenUsage.TotalTokens)
-	if c.stream {
-		// Token latency is only recorded for streaming responses, otherwise it doesn't make sense since
-		// these metrics are defined as a difference between the two output events.
-		c.metrics.RecordTokenLatency(ctx, tokenUsage.OutputTokens)
-		timeToFirstToken := c.metrics.GetTimeToFirstToken()
-		interTokenLatency := c.metrics.GetInterTokenLatency()
-		fmt.Printf("TTFT=%v, ITL=%v\n", timeToFirstToken, interTokenLatency)
-		if timeToFirstToken > 0 {
-			if headerMutation == nil {
-				headerMutation = &extprocv3.HeaderMutation{}
-			}
-			setHeader(headerMutation, "x-tokenlatency-ttft", fmt.Sprintf("%.3f", timeToFirstToken))
-		}
-		if interTokenLatency > 0 {
-			if headerMutation == nil {
-				headerMutation = &extprocv3.HeaderMutation{}
-			}
-			setHeader(headerMutation, "x-tokenlatency-itl", fmt.Sprintf("%.3f", interTokenLatency))
-		}
-	}
-
 	resp := &extprocv3.ProcessingResponse{
 		Response: &extprocv3.ProcessingResponse_ResponseBody{
 			ResponseBody: &extprocv3.BodyResponse{
@@ -342,6 +309,19 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 				},
 			},
 		},
+	}
+
+	// TODO: we need to investigate if we need to accumulate the token usage for streaming responses.
+	c.costs.InputTokens += tokenUsage.InputTokens
+	c.costs.OutputTokens += tokenUsage.OutputTokens
+	c.costs.TotalTokens += tokenUsage.TotalTokens
+
+	// Update metrics with token usage.
+	c.metrics.RecordTokenUsage(ctx, tokenUsage.InputTokens, tokenUsage.OutputTokens, tokenUsage.TotalTokens)
+	if c.stream {
+		// Token latency is only recorded for streaming responses, otherwise it doesn't make sense since
+		// these metrics are defined as a difference between the two output events.
+		c.metrics.RecordTokenLatency(ctx, tokenUsage.OutputTokens)
 	}
 
 	if body.EndOfStream && len(c.config.requestCosts) > 0 {
@@ -387,7 +367,7 @@ func parseOpenAIChatCompletionBody(body *extprocv3.HttpBody) (modelName string, 
 }
 
 func (c *chatCompletionProcessorUpstreamFilter) maybeBuildDynamicMetadata() (*structpb.Struct, error) {
-	metadata := make(map[string]*structpb.Value, len(c.config.requestCosts))
+	metadata := make(map[string]*structpb.Value, 2+len(c.config.requestCosts))
 	for i := range c.config.requestCosts {
 		rc := &c.config.requestCosts[i]
 		var cost uint32
@@ -417,6 +397,15 @@ func (c *chatCompletionProcessorUpstreamFilter) maybeBuildDynamicMetadata() (*st
 		c.logger.Info("Setting request cost metadata", "type", rc.Type, "cost", cost, "metadataKey", rc.MetadataKey)
 		metadata[rc.MetadataKey] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(cost)}}
 	}
+	if c.stream {
+		timeToFirstToken := c.metrics.GetTimeToFirstToken()
+		fmt.Printf("TTFT=%v\n", timeToFirstToken)
+		metadata["tokenlatency-ttft"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(timeToFirstToken)}}
+		interTokenLatency := c.metrics.GetInterTokenLatency()
+		fmt.Printf("ITL=%v\n", interTokenLatency)
+		metadata["tokenlatency-itl"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(interTokenLatency)}}
+	}
+
 	if len(metadata) == 0 {
 		return nil, nil
 	}
