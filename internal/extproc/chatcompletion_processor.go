@@ -367,7 +367,7 @@ func parseOpenAIChatCompletionBody(body *extprocv3.HttpBody) (modelName string, 
 }
 
 func (c *chatCompletionProcessorUpstreamFilter) maybeBuildDynamicMetadata() (*structpb.Struct, error) {
-	metadata := make(map[string]*structpb.Value, len(c.config.requestCosts))
+	metadata := make(map[string]*structpb.Value, 2+len(c.config.requestCosts))
 	for i := range c.config.requestCosts {
 		rc := &c.config.requestCosts[i]
 		var cost uint32
@@ -396,6 +396,12 @@ func (c *chatCompletionProcessorUpstreamFilter) maybeBuildDynamicMetadata() (*st
 		}
 		c.logger.Info("Setting request cost metadata", "type", rc.Type, "cost", cost, "metadataKey", rc.MetadataKey)
 		metadata[rc.MetadataKey] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(cost)}}
+	}
+	if c.stream {
+		timeToFirstToken := c.metrics.GetTimeToFirstToken()
+		metadata["tokenlatency-ttft"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(timeToFirstToken)}}
+		interTokenLatency := c.metrics.GetInterTokenLatency()
+		metadata["tokenlatency-itl"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(interTokenLatency)}}
 	}
 	if len(metadata) == 0 {
 		return nil, nil
