@@ -399,10 +399,8 @@ func (c *chatCompletionProcessorUpstreamFilter) maybeBuildDynamicMetadata() (*st
 	}
 	if c.stream {
 		timeToFirstToken := c.metrics.GetTimeToFirstToken()
-		fmt.Printf("TTFT=%v\n", timeToFirstToken)
 		metadata["tokenlatency-ttft"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(timeToFirstToken)}}
 		interTokenLatency := c.metrics.GetInterTokenLatency()
-		fmt.Printf("ITL=%v\n", interTokenLatency)
 		metadata["tokenlatency-itl"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(interTokenLatency)}}
 	}
 
