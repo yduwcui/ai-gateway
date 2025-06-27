@@ -28,7 +28,7 @@ type chatCompletion struct {
 	interTokenLatency float64
 }
 
-// NewChatCompletion creates a new ChatCompletion instance.
+// NewChatCompletion creates a new x.ChatCompletionMetrics instance.
 func NewChatCompletion(meter metric.Meter, newCustomFn x.NewCustomChatCompletionMetricsFn) x.ChatCompletionMetrics {
 	if newCustomFn != nil {
 		return newCustomFn(meter)
@@ -36,7 +36,7 @@ func NewChatCompletion(meter metric.Meter, newCustomFn x.NewCustomChatCompletion
 	return DefaultChatCompletion(meter)
 }
 
-// DefaultChatCompletion creates a new default ChatCompletion instance.
+// DefaultChatCompletion creates a new default x.ChatCompletionMetrics instance.
 func DefaultChatCompletion(meter metric.Meter) x.ChatCompletionMetrics {
 	return &chatCompletion{
 		metrics: newGenAI(meter),
@@ -69,7 +69,7 @@ func (c *chatCompletion) SetBackend(backend *filterapi.Backend) {
 	}
 }
 
-// RecordTokenUsage implements [ChatCompletion.RecordTokenUsage].
+// RecordTokenUsage implements [x.ChatCompletionMetrics.RecordTokenUsage].
 func (c *chatCompletion) RecordTokenUsage(ctx context.Context, inputTokens, outputTokens, totalTokens uint32, extraAttrs ...attribute.KeyValue) {
 	attrs := make([]attribute.KeyValue, 0, 3+len(extraAttrs))
 	attrs = append(attrs,
@@ -93,7 +93,7 @@ func (c *chatCompletion) RecordTokenUsage(ctx context.Context, inputTokens, outp
 	)
 }
 
-// RecordRequestCompletion implements [ChatCompletion.RecordRequestCompletion].
+// RecordRequestCompletion implements [x.ChatCompletionMetrics.RecordRequestCompletion].
 func (c *chatCompletion) RecordRequestCompletion(ctx context.Context, success bool, extraAttrs ...attribute.KeyValue) {
 	attrs := make([]attribute.KeyValue, 0, 3+len(extraAttrs))
 	attrs = append(attrs,
@@ -116,7 +116,7 @@ func (c *chatCompletion) RecordRequestCompletion(ctx context.Context, success bo
 	}
 }
 
-// RecordTokenLatency implements [ChatCompletion.RecordTokenLatency].
+// RecordTokenLatency implements [x.ChatCompletionMetrics.RecordTokenLatency].
 func (c *chatCompletion) RecordTokenLatency(ctx context.Context, tokens uint32, extraAttrs ...attribute.KeyValue) {
 	attrs := make([]attribute.KeyValue, 0, 3+len(extraAttrs))
 	attrs = append(attrs,
@@ -128,20 +128,22 @@ func (c *chatCompletion) RecordTokenLatency(ctx context.Context, tokens uint32, 
 
 	if !c.firstTokenSent {
 		c.firstTokenSent = true
-		c.timeToFirstToken = time.Since(c.requestStart).Seconds() * 1000
+		c.timeToFirstToken = time.Since(c.requestStart).Seconds()
 		c.metrics.firstTokenLatency.Record(ctx, c.timeToFirstToken, metric.WithAttributes(attrs...))
 	} else if tokens > 0 {
 		// Calculate time between tokens.
-		c.interTokenLatency = (time.Since(c.lastTokenTime).Seconds() * 1000) / float64(tokens)
+		c.interTokenLatency = time.Since(c.lastTokenTime).Seconds() / float64(tokens)
 		c.metrics.outputTokenLatency.Record(ctx, c.interTokenLatency, metric.WithAttributes(attrs...))
 	}
 	c.lastTokenTime = time.Now()
 }
 
-func (c *chatCompletion) GetTimeToFirstToken() float64 {
-	return c.timeToFirstToken
+// GetTimeToFirstTokenMs implements [x.ChatCompletionMetrics.GetTimeToFirstTokenMs].
+func (c *chatCompletion) GetTimeToFirstTokenMs() float64 {
+	return c.timeToFirstToken * 1000 // Convert seconds to milliseconds
 }
 
-func (c *chatCompletion) GetInterTokenLatency() float64 {
-	return c.interTokenLatency
+// GetInterTokenLatencyMs implements [x.ChatCompletionMetrics.GetInterTokenLatencyMs].
+func (c *chatCompletion) GetInterTokenLatencyMs() float64 {
+	return c.interTokenLatency * 1000 // Convert seconds to milliseconds
 }

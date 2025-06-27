@@ -205,14 +205,14 @@ func (m *mockChatCompletionMetrics) RecordTokenLatency(_ context.Context, _ uint
 	m.tokenLatencyCount++
 }
 
-// GetTimeToFirstToken implements [metrics.ChatCompletion].
-func (m *mockChatCompletionMetrics) GetTimeToFirstToken() float64 {
-	return m.timeToFirstToken
+// GetTimeToFirstTokenMs implements [metrics.ChatCompletion].
+func (m *mockChatCompletionMetrics) GetTimeToFirstTokenMs() float64 {
+	return m.timeToFirstToken * 1000
 }
 
-// GetInterTokenLatency implements [metrics.ChatCompletion].
-func (m *mockChatCompletionMetrics) GetInterTokenLatency() float64 {
-	return m.interTokenLatency
+// GetInterTokenLatencyMs implements [metrics.ChatCompletion].
+func (m *mockChatCompletionMetrics) GetInterTokenLatencyMs() float64 {
+	return m.interTokenLatency * 1000
 }
 
 // RecordRequestCompletion implements [metrics.ChatCompletion].
