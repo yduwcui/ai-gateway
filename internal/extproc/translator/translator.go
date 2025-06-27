@@ -120,8 +120,4 @@ type LLMTokenUsage struct {
 	OutputTokens uint32
 	// TotalTokens is the total number of tokens consumed.
 	TotalTokens uint32
-	// TimeToFirstTokenMs is the time to first token in milliseconds.
-	TimeToFirstTokenMs float64
-	// InterTokenLatencyMs is the inter token latency in milliseconds.
-	InterTokenLatencyMs float64
 }

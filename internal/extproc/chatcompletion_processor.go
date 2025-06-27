@@ -328,14 +328,15 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 	}
 
 	if body.EndOfStream && len(c.config.requestCosts) > 0 {
-		if c.stream {
-			c.costs.TimeToFirstTokenMs = c.metrics.GetTimeToFirstTokenMs()
-			c.costs.InterTokenLatencyMs = c.metrics.GetInterTokenLatencyMs()
-		}
-		resp.DynamicMetadata, err = buildDynamicMetadata(c.config, &c.costs, c.requestHeaders)
+		metadata, err := buildDynamicMetadata(c.config, &c.costs, c.requestHeaders)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build dynamic metadata: %w", err)
 		}
+		if c.stream {
+			// Adding token latency information to metadata
+			c.mergeWithTokenLatencyMetadata(metadata)
+		}
+		resp.DynamicMetadata = metadata
 	}
 
 	return resp, nil
@@ -365,6 +366,19 @@ func (c *chatCompletionProcessorUpstreamFilter) SetBackend(ctx context.Context, 
 	return
 }
 
+func (c *chatCompletionProcessorUpstreamFilter) mergeWithTokenLatencyMetadata(metadata *structpb.Struct) {
+	timeToFirstTokenMs := c.metrics.GetTimeToFirstTokenMs()
+	interTokenLatencyMs := c.metrics.GetInterTokenLatencyMs()
+	ns := c.config.metadataNamespace
+	innerVal := metadata.Fields[ns].GetStructValue()
+	if innerVal == nil {
+		innerVal = &structpb.Struct{Fields: map[string]*structpb.Value{}}
+		metadata.Fields[ns] = structpb.NewStructValue(innerVal)
+	}
+	innerVal.Fields["token_latency_ttft"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: timeToFirstTokenMs}}
+	innerVal.Fields["token_latency_itl"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: interTokenLatencyMs}}
+}
+
 func parseOpenAIChatCompletionBody(body *extprocv3.HttpBody) (modelName string, rb *openai.ChatCompletionRequest, err error) {
 	var openAIReq openai.ChatCompletionRequest
 	if err := json.Unmarshal(body.Body, &openAIReq); err != nil {
@@ -374,7 +388,7 @@ func parseOpenAIChatCompletionBody(body *extprocv3.HttpBody) (modelName string, 
 }
 
 func buildDynamicMetadata(config *processorConfig, costs *translator.LLMTokenUsage, requestHeaders map[string]string) (*structpb.Struct, error) {
-	metadata := make(map[string]*structpb.Value, 2+len(config.requestCosts))
+	metadata := make(map[string]*structpb.Value, len(config.requestCosts))
 	for i := range config.requestCosts {
 		rc := &config.requestCosts[i]
 		var cost uint32
@@ -402,10 +416,6 @@ func buildDynamicMetadata(config *processorConfig, costs *translator.LLMTokenUsa
 			return nil, fmt.Errorf("unknown request cost kind: %s", rc.Type)
 		}
 		metadata[rc.MetadataKey] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: float64(cost)}}
-	}
-	if costs.TimeToFirstTokenMs != 0.0 {
-		metadata["token_latency_ttft"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: costs.TimeToFirstTokenMs}}
-		metadata["token_latency_itl"] = &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: costs.InterTokenLatencyMs}}
 	}
 	if len(metadata) == 0 {
 		return nil, nil
