@@ -158,30 +158,9 @@ func TestRecordRequestCompletion(t *testing.T) {
 }
 
 func TestGetTimeToFirstTokenMsAndGetInterTokenLatencyMs(t *testing.T) {
-	var (
-		mr    = metric.NewManualReader()
-		meter = metric.NewMeterProvider(metric.WithReader(mr)).Meter("test")
-		pm    = DefaultChatCompletion(meter).(*chatCompletion)
-
-		extra = attribute.Key("extra").String("value")
-	)
-
-	pm.StartRequest(nil)
-	pm.SetModel("test-model")
-	pm.SetBackend(&filterapi.Backend{Schema: filterapi.VersionedAPISchema{Name: filterapi.APISchemaAWSBedrock}})
-
-	// Test GetTimeToFirstTokenMs.
-	time.Sleep(10 * time.Millisecond)
-	pm.RecordTokenLatency(t.Context(), 1, extra)
-	assert.True(t, pm.firstTokenSent)
-	timeToFirstToken := pm.GetTimeToFirstTokenMs()
-	assert.Greater(t, timeToFirstToken, 0.0)
-
-	// Test GetInterTokenLatencyMs.
-	time.Sleep(10 * time.Millisecond)
-	pm.RecordTokenLatency(t.Context(), 5, extra)
-	interTokenLatency := pm.GetInterTokenLatencyMs()
-	assert.Greater(t, interTokenLatency, 0.0)
+	c := chatCompletion{timeToFirstToken: 1.0, interTokenLatency: 2.0}
+	assert.Equal(t, 1000.0, c.GetTimeToFirstTokenMs())
+	assert.Equal(t, 2000.0, c.GetInterTokenLatencyMs())
 }
 
 // getHistogramValues returns the count and sum of a histogram metric with the given attributes.

@@ -334,7 +334,7 @@ func (c *chatCompletionProcessorUpstreamFilter) ProcessResponseBody(ctx context.
 			return nil, fmt.Errorf("failed to build dynamic metadata: %w", err)
 		}
 		if c.stream {
-			// Adding token latency information to metadata
+			// Adding token latency information to metadata.
 			c.mergeWithTokenLatencyMetadata(metadata)
 		}
 		resp.DynamicMetadata = metadata
