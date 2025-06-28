@@ -154,6 +154,7 @@ type embeddingsProcessorUpstreamFilter struct {
 	responseHeaders        map[string]string
 	responseEncoding       string
 	modelNameOverride      string
+	backendName            string
 	handler                backendauth.Handler
 	originalRequestBodyRaw []byte
 	originalRequestBody    *openai.EmbeddingRequest
@@ -305,7 +306,7 @@ func (e *embeddingsProcessorUpstreamFilter) ProcessResponseBody(ctx context.Cont
 	e.metrics.RecordTokenUsage(ctx, tokenUsage.InputTokens, tokenUsage.TotalTokens)
 
 	if body.EndOfStream && len(e.config.requestCosts) > 0 {
-		resp.DynamicMetadata, err = buildDynamicMetadata(e.config, &e.costs, e.requestHeaders)
+		resp.DynamicMetadata, err = buildDynamicMetadata(e.config, &e.costs, e.requestHeaders, e.modelNameOverride, e.backendName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build dynamic metadata: %w", err)
 		}
@@ -326,6 +327,7 @@ func (e *embeddingsProcessorUpstreamFilter) SetBackend(ctx context.Context, b *f
 	rp.upstreamFilterCount++
 	e.metrics.SetBackend(b)
 	e.modelNameOverride = b.ModelNameOverride
+	e.backendName = b.Name
 	if err = e.selectTranslator(b.Schema); err != nil {
 		return fmt.Errorf("failed to select translator: %w", err)
 	}
