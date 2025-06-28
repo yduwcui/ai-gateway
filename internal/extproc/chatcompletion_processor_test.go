@@ -256,6 +256,8 @@ func Test_chatCompletionProcessorUpstreamFilter_ProcessResponseBody(t *testing.T
 					},
 				},
 			},
+			backendName:       "some_backend",
+			modelNameOverride: "ai_gateway_llm",
 		}
 		res, err := p.ProcessResponseBody(t.Context(), inBody)
 		require.NoError(t, err)
@@ -275,6 +277,8 @@ func Test_chatCompletionProcessorUpstreamFilter_ProcessResponseBody(t *testing.T
 			GetStructValue().Fields["cel_int"].GetNumberValue())
 		require.Equal(t, float64(9999), md.Fields["ai_gateway_llm_ns"].
 			GetStructValue().Fields["cel_uint"].GetNumberValue())
+		require.Equal(t, "ai_gateway_llm", md.Fields["route"].GetStructValue().Fields["model_name_override"].GetStringValue())
+		require.Equal(t, "some_backend", md.Fields["route"].GetStructValue().Fields["backend_name"].GetStringValue())
 	})
 }
 
@@ -291,14 +295,19 @@ func Test_chatCompletionProcessorUpstreamFilter_SetBackend(t *testing.T) {
 	headers := map[string]string{":path": "/foo"}
 	mm := &mockChatCompletionMetrics{}
 	p := &chatCompletionProcessorUpstreamFilter{
-		config:         &processorConfig{},
+		config: &processorConfig{
+			requestCosts: []processorConfigRequestCost{
+				{LLMRequestCost: &filterapi.LLMRequestCost{Type: filterapi.LLMRequestCostTypeOutputToken, MetadataKey: "output_token_usage", CEL: "15"}},
+			},
+		},
 		requestHeaders: headers,
 		logger:         slog.Default(),
 		metrics:        mm,
 	}
 	err := p.SetBackend(t.Context(), &filterapi.Backend{
-		Name:   "some-backend",
-		Schema: filterapi.VersionedAPISchema{Name: "some-schema", Version: "v10.0"},
+		Name:              "some-backend",
+		Schema:            filterapi.VersionedAPISchema{Name: "some-schema", Version: "v10.0"},
+		ModelNameOverride: "ai_gateway_llm",
 	}, nil, &chatCompletionProcessorRouterFilter{})
 	require.ErrorContains(t, err, "unsupported API schema: backend={some-schema v10.0}")
 	mm.RequireRequestFailure(t)
