@@ -18,6 +18,7 @@ import (
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/envoyproxy/ai-gateway/filterapi"
 	"github.com/envoyproxy/ai-gateway/filterapi/x"
@@ -399,5 +400,61 @@ func TestChatCompletion_ParseBody(t *testing.T) {
 		require.Error(t, err)
 		require.Empty(t, modelName)
 		require.Nil(t, rb)
+	})
+}
+
+func Test_chatCompletionProcessorUpstreamFilter_MergeWithTokenLatencyMetadata(t *testing.T) {
+	t.Run("empty metadata", func(t *testing.T) {
+		mm := &mockChatCompletionMetrics{}
+		mt := &mockTranslator{}
+		ns := "ai_gateway_llm_ns"
+		p := &chatCompletionProcessorUpstreamFilter{
+			translator: mt,
+			logger:     slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
+			metrics:    mm,
+			stream:     true,
+			config:     &processorConfig{metadataNamespace: ns},
+		}
+		metadata := &structpb.Struct{Fields: map[string]*structpb.Value{}}
+		p.mergeWithTokenLatencyMetadata(metadata)
+
+		val, ok := metadata.Fields[ns]
+		require.True(t, ok)
+
+		inner := val.GetStructValue()
+		require.NotNil(t, inner)
+		require.Equal(t, 1000.0, inner.Fields["token_latency_ttft"].GetNumberValue())
+		require.Equal(t, 500.0, inner.Fields["token_latency_itl"].GetNumberValue())
+	})
+	t.Run("existing metadata", func(t *testing.T) {
+		mm := &mockChatCompletionMetrics{}
+		mt := &mockTranslator{}
+		ns := "ai_gateway_llm_ns"
+		p := &chatCompletionProcessorUpstreamFilter{
+			translator: mt,
+			logger:     slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
+			metrics:    mm,
+			stream:     true,
+			config:     &processorConfig{metadataNamespace: ns},
+		}
+		existingInner := &structpb.Struct{Fields: map[string]*structpb.Value{
+			"tokenCost":        {Kind: &structpb.Value_NumberValue{NumberValue: float64(200)}},
+			"inputTokenUsage":  {Kind: &structpb.Value_NumberValue{NumberValue: float64(300)}},
+			"outputTokenUsage": {Kind: &structpb.Value_NumberValue{NumberValue: float64(400)}},
+		}}
+		metadata := &structpb.Struct{Fields: map[string]*structpb.Value{
+			ns: structpb.NewStructValue(existingInner),
+		}}
+		p.mergeWithTokenLatencyMetadata(metadata)
+
+		val, ok := metadata.Fields[ns]
+		require.True(t, ok)
+		inner := val.GetStructValue()
+		require.NotNil(t, inner)
+		require.Equal(t, 1000.0, inner.Fields["token_latency_ttft"].GetNumberValue())
+		require.Equal(t, 500.0, inner.Fields["token_latency_itl"].GetNumberValue())
+		require.Equal(t, 200.0, inner.Fields["tokenCost"].GetNumberValue())
+		require.Equal(t, 300.0, inner.Fields["inputTokenUsage"].GetNumberValue())
+		require.Equal(t, 400.0, inner.Fields["outputTokenUsage"].GetNumberValue())
 	})
 }

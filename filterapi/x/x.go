@@ -67,6 +67,10 @@ type ChatCompletionMetrics interface {
 	RecordRequestCompletion(ctx context.Context, success bool, extraAttrs ...attribute.KeyValue)
 	// RecordTokenLatency records latency metrics for token generation.
 	RecordTokenLatency(ctx context.Context, tokens uint32, extraAttrs ...attribute.KeyValue)
+	// GetTimeToFirstTokenMs returns the time to first token in stream mode in milliseconds.
+	GetTimeToFirstTokenMs() float64
+	// GetInterTokenLatencyMs returns the inter token latency in stream mode in milliseconds.
+	GetInterTokenLatencyMs() float64
 }
 
 // EmbeddingsMetrics is the interface for the embeddings AI Gateway metrics.
