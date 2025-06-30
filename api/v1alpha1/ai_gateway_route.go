@@ -227,6 +227,12 @@ type AIGatewayRouteRule struct {
 
 	// Timeouts defines the timeouts that can be configured for an HTTP request.
 	//
+	// If this field is not set, or the timeout.requestTimeout is nil, Envoy AI Gateway defaults to
+	// set 60s for the request timeout as opposed to 15s of the Envoy Gateway's default value.
+	//
+	// For streaming responses (like chat completions with stream=true), consider setting
+	// longer timeouts as the response may take time until the completion.
+	//
 	// +optional
 	Timeouts *gwapiv1.HTTPRouteTimeouts `json:"timeouts,omitempty"`
 
