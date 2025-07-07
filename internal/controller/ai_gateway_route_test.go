@@ -142,6 +142,12 @@ func TestAIGatewayRouterController_syncAIGatewayRoute(t *testing.T) {
 	err := s.client.Get(t.Context(), client.ObjectKey{Name: hostRewriteHTTPFilterName, Namespace: "ns1"}, &f)
 	require.NoError(t, err)
 	require.Equal(t, hostRewriteHTTPFilterName, f.Name)
+
+	// Also check the default route not found response filter.
+	var notFoundFilter egv1a1.HTTPRouteFilter
+	err = s.client.Get(t.Context(), client.ObjectKey{Name: routeNotFoundResponseHTTPFilterName, Namespace: "ns1"}, &notFoundFilter)
+	require.NoError(t, err)
+	require.Equal(t, routeNotFoundResponseHTTPFilterName, notFoundFilter.Name)
 }
 
 func Test_newHTTPRoute(t *testing.T) {
@@ -279,8 +285,18 @@ func Test_newHTTPRoute(t *testing.T) {
 				},
 				{
 					// The default rule.
-					Name:    ptr.To[gwapiv1.SectionName]("unreachable"),
+					Name:    ptr.To[gwapiv1.SectionName]("route-not-found"),
 					Matches: []gwapiv1.HTTPRouteMatch{{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/")}}},
+					Filters: []gwapiv1.HTTPRouteFilter{
+						{
+							Type: gwapiv1.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwapiv1.LocalObjectReference{
+								Group: "gateway.envoyproxy.io",
+								Kind:  "HTTPRouteFilter",
+								Name:  routeNotFoundResponseHTTPFilterName,
+							},
+						},
+					},
 				},
 			}
 			require.Equal(t, expRules, httpRoute.Spec.Rules)
