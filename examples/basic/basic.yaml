@@ -84,10 +84,6 @@ spec:
     name: envoy-ai-gateway-basic-openai
     kind: Backend
     group: gateway.envoyproxy.io
-  backendSecurityPolicyRef:
-    name: envoy-ai-gateway-basic-openai-apikey
-    kind: BackendSecurityPolicy
-    group: aigateway.envoyproxy.io
 ---
 apiVersion: aigateway.envoyproxy.io/v1alpha1
 kind: AIServiceBackend
@@ -101,10 +97,6 @@ spec:
     name: envoy-ai-gateway-basic-aws
     kind: Backend
     group: gateway.envoyproxy.io
-  backendSecurityPolicyRef:
-    name: envoy-ai-gateway-basic-aws-credentials
-    kind: BackendSecurityPolicy
-    group: aigateway.envoyproxy.io
 ---
 # GCP Example
 apiVersion: aigateway.envoyproxy.io/v1alpha1
@@ -119,10 +111,6 @@ spec:
     name: envoy-ai-gateway-basic-gcp
     kind: Backend
     group: gateway.envoyproxy.io
-  backendSecurityPolicyRef:
-    name: envoy-ai-gateway-basic-gcp-credentials
-    kind: BackendSecurityPolicy
-    group: aigateway.envoyproxy.io
 ---
 apiVersion: aigateway.envoyproxy.io/v1alpha1
 kind: AIServiceBackend
@@ -137,10 +125,6 @@ spec:
     name: envoy-ai-gateway-basic-azure
     kind: Backend
     group: gateway.envoyproxy.io
-  backendSecurityPolicyRef:
-    name: envoy-ai-gateway-basic-azure-credentials
-    kind: BackendSecurityPolicy
-    group: aigateway.envoyproxy.io
 ---
 apiVersion: aigateway.envoyproxy.io/v1alpha1
 kind: BackendSecurityPolicy
@@ -148,6 +132,10 @@ metadata:
   name: envoy-ai-gateway-basic-openai-apikey
   namespace: default
 spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: envoy-ai-gateway-basic-openai
   type: APIKey
   apiKey:
     secretRef:
@@ -160,6 +148,10 @@ metadata:
   name: envoy-ai-gateway-basic-azure-credentials
   namespace: default
 spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: envoy-ai-gateway-basic-azure
   type: AzureCredentials
   azureCredentials:
     clientID: AZURE_CLIENT_ID   # Replace with your Azure Client ID.
@@ -174,6 +166,10 @@ metadata:
   name: envoy-ai-gateway-basic-aws-credentials
   namespace: default
 spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: envoy-ai-gateway-basic-aws
   type: AWSCredentials
   awsCredentials:
     region: us-east-1
@@ -187,6 +183,10 @@ metadata:
   name: envoy-ai-gateway-basic-gcp-credentials
   namespace: default
 spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: envoy-ai-gateway-basic-gcp
   type: GCPCredentials
   gcpCredentials:
     projectName: GCP_PROJECT_NAME  # Replace with your GCP project name
