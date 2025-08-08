@@ -21,10 +21,8 @@ import (
 //
 //   - HTTPRoute of the Gateway API as a top-level resource to bind all backends.
 //     The name of the HTTPRoute is the same as the AIGatewayRoute.
-//   - EnvoyExtensionPolicy of the Envoy Gateway API to attach the AI Gateway filter into the target Gateways.
-//     This will be created per Gateway, and its name is `ai-eg-eep-${gateway-name}`.
 //   - HTTPRouteFilter of the Envoy Gateway API per namespace for automatic hostname rewrite.
-//     The name of the HTTPRouteFilter is `ai-eg-host-rewrite`.
+//     The name of the HTTPRouteFilter is `ai-eg-host-rewrite-${AIGatewayRoute.Name}`.
 //
 // All of these resources are created in the same namespace as the AIGatewayRoute. Note that this is the implementation
 // detail subject to change. If you want to customize the default behavior of the Envoy AI Gateway, you can use these
