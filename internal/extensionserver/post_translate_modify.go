@@ -317,6 +317,17 @@ func (s *Server) maybeModifyCluster(cluster *clusterv3.Cluster) {
 								},
 							},
 						},
+						{
+							Action: &mutation_rulesv3.HeaderMutation_Append{
+								Append: &corev3.HeaderValueOption{
+									AppendAction: corev3.HeaderValueOption_ADD_IF_ABSENT,
+									Header: &corev3.HeaderValue{
+										Key:   "x-request-tx-duration",
+										Value: "request-tx-duration",
+									},
+								},
+							},
+						},
 					},
 				},
 			}),
