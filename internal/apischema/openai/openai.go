@@ -19,6 +19,7 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/openai/openai-go/v2"
+	"github.com/tidwall/gjson"
 	"google.golang.org/genai"
 
 	"github.com/envoyproxy/ai-gateway/internal/apischema/awsbedrock"
@@ -142,15 +143,14 @@ type ChatCompletionContentPartUserUnionParam struct {
 }
 
 func (c *ChatCompletionContentPartUserUnionParam) UnmarshalJSON(data []byte) error {
-	var chatContentPart map[string]any
-	if err := json.Unmarshal(data, &chatContentPart); err != nil {
-		return err
+	typeResult := gjson.GetBytes(data, "type")
+	if !typeResult.Exists() {
+		return errors.New("chat content does not have type")
 	}
-	var contentType string
-	var ok bool
-	if contentType, ok = chatContentPart["type"].(string); !ok {
-		return fmt.Errorf("chat content does not have type")
-	}
+
+	// Based on the 'type' field, unmarshal into the correct struct.
+	contentType := typeResult.String()
+
 	switch contentType {
 	case string(ChatCompletionContentPartTextTypeText):
 		var textContent ChatCompletionContentPartTextParam
@@ -290,18 +290,14 @@ type ChatCompletionMessageParamUnion struct {
 }
 
 func (c *ChatCompletionMessageParamUnion) UnmarshalJSON(data []byte) error {
-	var chatMessage map[string]any
-	if err := json.Unmarshal(data, &chatMessage); err != nil {
-		return err
+	roleResult := gjson.GetBytes(data, "role")
+	if !roleResult.Exists() {
+		return errors.New("chat message does not have role")
 	}
-	if _, ok := chatMessage["role"]; !ok {
-		return fmt.Errorf("chat message does not have role")
-	}
-	var role string
-	var ok bool
-	if role, ok = chatMessage["role"].(string); !ok {
-		return fmt.Errorf("chat message role is not string: %s", role)
-	}
+
+	// Based on the 'role' field, unmarshal into the correct struct.
+	role := roleResult.String()
+
 	switch role {
 	case ChatMessageRoleUser:
 		var userMessage ChatCompletionUserMessageParam
@@ -545,20 +541,13 @@ func (c ChatCompletionResponseFormatUnion) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements the json.Unmarshaler interface for ChatCompletionResponseFormatUnion.
 func (c *ChatCompletionResponseFormatUnion) UnmarshalJSON(data []byte) error {
-	// First, peek at the "type" field to determine the concrete type.
-	var responseFormatPart map[string]any
-	if err := json.Unmarshal(data, &responseFormatPart); err != nil {
-		return err
-	}
-
-	var typeValue string
-	var ok bool
-	if typeValue, ok = responseFormatPart["type"].(string); !ok {
-		return fmt.Errorf("response format does not have type")
+	typeResult := gjson.GetBytes(data, "type")
+	if !typeResult.Exists() {
+		return errors.New("response format does not have type")
 	}
 
 	// Based on the 'type' field, unmarshal into the correct struct.
-	responseFormatType := ChatCompletionResponseFormatType(typeValue)
+	responseFormatType := ChatCompletionResponseFormatType(typeResult.String())
 
 	switch responseFormatType {
 	case ChatCompletionResponseFormatTypeText:
