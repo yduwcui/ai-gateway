@@ -57,6 +57,10 @@ const (
 
 	// ModelTextEmbedding3Small is the cheapest model usable with /embeddings.
 	ModelTextEmbedding3Small = "text-embedding-3-small"
+
+	// ModelGPTImage1Mini is the smallest/cheapest Images model usable with
+	// /v1/images/generations. Use with size "1024x1024" and quality "low".
+	ModelGPTImage1Mini = "gpt-image-1-mini"
 )
 
 // ChatCompletionContentPartRefusalType The type of the content part.
@@ -310,9 +314,6 @@ func (s *EmbeddingRequestInput) UnmarshalJSON(data []byte) (err error) {
 	s.Value, err = unmarshalJSONNestedUnion("input", data)
 	if err != nil {
 		return
-	}
-	if _, ok := s.Value.([][]int64); ok {
-		return fmt.Errorf("input has unsupported type [][]int64")
 	}
 	return
 }
