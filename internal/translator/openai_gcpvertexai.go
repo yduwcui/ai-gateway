@@ -276,14 +276,14 @@ func (o *openAIToGCPVertexAITranslatorV1ChatCompletion) geminiCandidatesToOpenAI
 	responseMode := o.responseMode
 	choices := make([]openai.ChatCompletionResponseChunkChoice, 0, len(candidates))
 
-	for _, candidate := range candidates {
+	for i, candidate := range candidates {
 		if candidate == nil {
 			continue
 		}
 
 		// Create the streaming choice.
 		choice := openai.ChatCompletionResponseChunkChoice{
-			Index: 0,
+			Index: int64(i),
 		}
 
 		toolCalls := []openai.ChatCompletionChunkChoiceDeltaToolCall{}
