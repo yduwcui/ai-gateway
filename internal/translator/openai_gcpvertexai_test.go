@@ -779,9 +779,10 @@ func TestOpenAIToGCPVertexAITranslatorV1ChatCompletion_ResponseBody(t *testing.T
     }
 }`),
 			wantTokenUsage: LLMTokenUsage{
-				InputTokens:  10,
-				OutputTokens: 15,
-				TotalTokens:  25,
+				InputTokens:       10,
+				OutputTokens:      15,
+				TotalTokens:       25,
+				CachedInputTokens: 10,
 			},
 		},
 		{
@@ -1448,23 +1449,6 @@ func TestExtractToolCallsStreamIndexing(t *testing.T) {
 		assert.False(t, ids[*call.ID], "Tool call ID should be unique: %s", *call.ID)
 		ids[*call.ID] = true
 	}
-}
-
-func getChatCompletionResponseChunk(body []byte) []openai.ChatCompletionResponseChunk {
-	lines := bytes.Split(body, []byte("\n\n"))
-
-	chunks := []openai.ChatCompletionResponseChunk{}
-	for _, line := range lines {
-		// Remove "data: " prefix from SSE format if present.
-		line = bytes.TrimPrefix(line, []byte("data: "))
-
-		// Try to parse as JSON.
-		var chunk openai.ChatCompletionResponseChunk
-		if err := json.Unmarshal(line, &chunk); err == nil {
-			chunks = append(chunks, chunk)
-		}
-	}
-	return chunks
 }
 
 func TestOpenAIToGCPVertexAITranslatorV1ChatCompletion_StreamingParallelToolIndex(t *testing.T) {

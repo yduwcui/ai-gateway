@@ -12,12 +12,14 @@ import (
 	"io"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/shared"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
 	anthropicVertex "github.com/anthropics/anthropic-sdk-go/vertex"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	openaigo "github.com/openai/openai-go/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -366,6 +368,8 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 		{
 			name: "basic text response",
 			inputResponse: &anthropic.Message{
+				ID:         "msg_01XYZ123",
+				Model:      "claude-3-5-sonnet-20241022",
 				Role:       constant.Assistant(anthropic.MessageParamRoleAssistant),
 				Content:    []anthropic.ContentBlockUnion{{Type: "text", Text: "Hello there!"}},
 				StopReason: anthropic.StopReasonEndTurn,
@@ -373,7 +377,10 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 			},
 			respHeaders: map[string]string{statusHeaderName: "200"},
 			expectedOpenAIResponse: openai.ChatCompletionResponse{
-				Object: "chat.completion",
+				ID:      "msg_01XYZ123",
+				Model:   "claude-3-5-sonnet-20241022",
+				Created: openai.JSONUNIXTime(time.Unix(ReleaseDateUnix, 0)),
+				Object:  "chat.completion",
 				Usage: openai.Usage{
 					PromptTokens:     15,
 					CompletionTokens: 20,
@@ -394,7 +401,9 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 		{
 			name: "response with tool use",
 			inputResponse: &anthropic.Message{
-				Role: constant.Assistant(anthropic.MessageParamRoleAssistant),
+				ID:    "msg_01XYZ123",
+				Model: "claude-3-5-sonnet-20241022",
+				Role:  constant.Assistant(anthropic.MessageParamRoleAssistant),
 				Content: []anthropic.ContentBlockUnion{
 					{Type: "text", Text: "Ok, I will call the tool."},
 					{Type: "tool_use", ID: "toolu_01", Name: "get_weather", Input: json.RawMessage(`{"location": "Tokyo", "unit": "celsius"}`)},
@@ -404,7 +413,10 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 			},
 			respHeaders: map[string]string{statusHeaderName: "200"},
 			expectedOpenAIResponse: openai.ChatCompletionResponse{
-				Object: "chat.completion",
+				ID:      "msg_01XYZ123",
+				Model:   "claude-3-5-sonnet-20241022",
+				Created: openai.JSONUNIXTime(time.Unix(ReleaseDateUnix, 0)),
+				Object:  "chat.completion",
 				Usage: openai.Usage{
 					PromptTokens: 35, CompletionTokens: 15, TotalTokens: 50,
 					PromptTokensDetails: &openai.PromptTokensDetails{
@@ -445,8 +457,10 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 			},
 			respHeaders: map[string]string{statusHeaderName: "200"},
 			expectedOpenAIResponse: openai.ChatCompletionResponse{
-				Model:  "claude-3-5-sonnet-20241022",
-				Object: "chat.completion",
+				ID:      "msg_01XYZ123",
+				Model:   "claude-3-5-sonnet-20241022",
+				Created: openai.JSONUNIXTime(time.Unix(ReleaseDateUnix, 0)),
+				Object:  "chat.completion",
 				Usage: openai.Usage{
 					PromptTokens:     10,
 					CompletionTokens: 12,
@@ -496,7 +510,7 @@ func TestOpenAIToGCPAnthropicTranslatorV1ChatCompletion_ResponseBody(t *testing.
 			}
 			require.Equal(t, expectedTokenUsage, usedToken)
 
-			if diff := cmp.Diff(tt.expectedOpenAIResponse, gotResp); diff != "" {
+			if diff := cmp.Diff(tt.expectedOpenAIResponse, gotResp, cmpopts.IgnoreFields(openai.ChatCompletionResponse{}, "Created")); diff != "" {
 				t.Errorf("ResponseBody mismatch (-want +got):\n%s", diff)
 			}
 		})
